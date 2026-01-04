@@ -1,0 +1,23 @@
+[package]
+name = "applib"
+version = "0.1.0"
+edition = "2021"
+authors = ["Cihan Taş <cihan@tas.fm>"]
+description = "A native application framework for building Linux desktop applications"
+license = "LGPL-3.0-or-later"
+license-file = "LICENSE"
+repository = "https://github.com/cihantas/applib"
+homepage = "https://applib.dev"
+keywords = ["gui", "ui", "desktop", "linux", "gpui"]
+categories = ["gui", "development-tools"]
+readme = "README.md"
+
+[dependencies]
+gpui = "0.2"
+chrono = "0.4"
+open = "5"
+anyhow = "1.0"
+
+[lib]
+name = "applib"
+path = "src/lib.rs"

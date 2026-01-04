@@ -1,0 +1,134 @@
+                   AppLib License
+                   ==============
+
+AppLib is dual-licensed under the GNU Lesser General Public License 
+version 3 (LGPL-3.0-or-later) with Additional Terms, OR a Commercial 
+License.
+
+You may choose either license. If you do not have a Commercial License
+agreement, your use is governed by the LGPL-3.0 with Additional Terms
+as described below.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                        OPEN SOURCE LICENSE
+              LGPL-3.0-or-later with Additional Terms
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copyright (C) 2025 AppLib Contributors
+
+This library is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as 
+published by the Free Software Foundation, either version 3 of the 
+License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public 
+License along with this library. If not, see:
+https://www.gnu.org/licenses/lgpl-3.0.html
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                        ADDITIONAL TERMS
+              Pursuant to Section 7 of the LGPL-3.0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In addition to the terms of the LGPL-3.0, the following additional 
+terms apply to your use of AppLib:
+
+1. NON-COMPETE RESTRICTION
+
+   You may NOT use, modify, copy, or distribute this software, in 
+   whole or in part, to create, develop, market, or contribute to 
+   any software product that:
+
+   (a) Is a user interface framework, toolkit, widget library, 
+       component library, or application development framework; AND
+
+   (b) Provides substantially similar functionality to AppLib 
+       (including but not limited to: UI components, layout systems,
+       or desktop application development tools); AND
+
+   (c) Is distributed to or made available to third parties, whether 
+       commercially, freely, or as open source.
+
+2. WHAT THIS RESTRICTION DOES NOT APPLY TO
+
+   This non-compete restriction explicitly DOES NOT apply to:
+
+   (a) Applications - You may build any application (commercial, 
+       proprietary, or open source) using AppLib without restriction.
+
+   (b) Internal Use - You may modify AppLib for your own internal 
+       applications without distributing those modifications.
+
+   (c) Plugins & Extensions - You may create and distribute plugins, 
+       themes, extensions, or add-ons that extend AppLib's 
+       functionality.
+
+   (d) Complementary Tools - You may create tools that work alongside 
+       AppLib (such as design tools, code generators, or debugging 
+       utilities) as long as they do not replace AppLib's core 
+       functionality.
+
+   (e) Contributions - You may contribute modifications back to the 
+       official AppLib project.
+
+   (f) Forks for Personal Use - You may fork AppLib for personal, 
+       non-distributed use.
+
+3. ATTRIBUTION
+
+   If you distribute applications built with AppLib, you must include 
+   attribution to AppLib in your application's "About" section, 
+   documentation, or credits. A simple "Built with AppLib" notice 
+   with a link to the project is sufficient.
+
+4. SCOPE OF MODIFICATIONS
+
+   As required by the LGPL-3.0, if you modify AppLib itself and 
+   distribute those modifications (either standalone or as part of 
+   an application), you must make the source code of your 
+   modifications available under this same license.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                       COMMERCIAL LICENSE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A Commercial License is available for organizations that:
+
+- Prefer not to comply with the LGPL-3.0 copyleft requirements 
+  (e.g., want to keep AppLib modifications proprietary)
+- Want additional support, warranties, or indemnification
+- Require different licensing terms for legal/compliance reasons
+- Want access to enterprise features or priority support
+
+For Commercial License inquiries, contact: cihan@tas.fm
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                           SUMMARY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✓ Build commercial/proprietary apps          — ALLOWED (free)
+  ✓ Sell apps built with AppLib                — ALLOWED (free)
+  ✓ Modify AppLib for your app                 — ALLOWED (share mods)
+  ✓ Create plugins/themes/extensions           — ALLOWED (free)
+  ✓ Create complementary tools                 — ALLOWED (free)
+  ✓ Contribute to AppLib                       — ALLOWED & WELCOME
+  ✓ Use internally without distribution        — ALLOWED (free)
+  
+  ✗ Create competing UI framework              — NOT ALLOWED
+  ✗ Fork and create "BetterLib"                — NOT ALLOWED  
+  ✗ Offer AppLib as a service                  — NOT ALLOWED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
