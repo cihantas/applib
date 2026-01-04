@@ -61,25 +61,25 @@ impl Render for MyApp {
 ## Available Components
 
 ### Layout
-`VStack` · `HStack` · `ZStack` · `Spacer` · `Divider`
+[`VStack`](https://applib.dev/docs/2_components/vstack) · [`HStack`](https://applib.dev/docs/2_components/hstack) · [`ZStack`](https://applib.dev/docs/2_components/zstack) · [`Spacer`](https://applib.dev/docs/2_components/spacer) · [`Divider`](https://applib.dev/docs/2_components/divider)
 
 ### Controls
-`Button` · `IconButton` · `Toggle` · `Checkbox` · `RadioGroup` · `Slider` · `Stepper` · `Picker` · `DatePicker` · `ColorPicker`
+[`Button`](https://applib.dev/docs/2_components/button) · [`IconButton`](https://applib.dev/docs/2_components/icon_button) · [`Toggle`](https://applib.dev/docs/2_components/toggle) · [`Checkbox`](https://applib.dev/docs/2_components/checkbox) · [`RadioGroup`](https://applib.dev/docs/2_components/radio_group) · [`Slider`](https://applib.dev/docs/2_components/slider) · [`Stepper`](https://applib.dev/docs/2_components/stepper) · [`Picker`](https://applib.dev/docs/2_components/picker) · [`DatePicker`](https://applib.dev/docs/2_components/date_picker) · [`ColorPicker`](https://applib.dev/docs/2_components/color_picker)
 
 ### Input
-`TextField` · `SecureField` · `TextArea`
+[`TextField`](https://applib.dev/docs/2_components/text_field) · [`SecureField`](https://applib.dev/docs/2_components/secure_field) · [`TextArea`](https://applib.dev/docs/2_components/text_area)
 
 ### Lists & Tables
-`List` · `ListItem` · `Table` · `TableRow` · `LazyVStack` · `LazyHStack` · `LazyVGrid` · `LazyHGrid`
+[`List`](https://applib.dev/docs/2_components/list) · [`ListItem`](https://applib.dev/docs/2_components/list_item) · [`Table`](https://applib.dev/docs/2_components/table) · [`TableRow`](https://applib.dev/docs/2_components/table_row) · [`LazyVStack`](https://applib.dev/docs/2_components/lazy_vstack) · [`LazyHStack`](https://applib.dev/docs/2_components/lazy_hstack) · [`LazyVGrid`](https://applib.dev/docs/2_components/lazy_vgrid) · [`LazyHGrid`](https://applib.dev/docs/2_components/lazy_hgrid)
 
 ### Navigation
-`TabView` · `Sidebar` · `SidebarItem` · `Menu` · `ContextMenu`
+[`TabView`](https://applib.dev/docs/2_components/tab_view) · [`Sidebar`](https://applib.dev/docs/2_components/sidebar) · [`SidebarItem`](https://applib.dev/docs/2_components/sidebar_item) · [`Menu`](https://applib.dev/docs/2_components/menu) · [`ContextMenu`](https://applib.dev/docs/2_components/context_menu)
 
 ### Windows & Containers
-`WindowFrame` · `TitleBar` · `TrafficLights` · `SplitView` · `ScrollView` · `Panel` · `Sheet` · `Alert` · `Popover` · `GroupBox` · `Section` · `Form` · `DisclosureGroup`
+[`WindowFrame`](https://applib.dev/docs/2_components/window_frame) · [`TitleBar`](https://applib.dev/docs/2_components/title_bar) · [`TrafficLights`](https://applib.dev/docs/2_components/traffic_lights) · [`SplitView`](https://applib.dev/docs/2_components/split_view) · [`ScrollView`](https://applib.dev/docs/2_components/scroll_view) · [`Panel`](https://applib.dev/docs/2_components/panel) · [`Sheet`](https://applib.dev/docs/2_components/sheet) · [`Alert`](https://applib.dev/docs/2_components/alert) · [`Popover`](https://applib.dev/docs/2_components/popover) · [`GroupBox`](https://applib.dev/docs/2_components/group_box) · [`Section`](https://applib.dev/docs/2_components/section) · [`Form`](https://applib.dev/docs/2_components/form) · [`DisclosureGroup`](https://applib.dev/docs/2_components/disclosure_group)
 
 ### Display
-`Text` · `Label` · `Badge` · `Image` · `ProgressView` · `EmptyState` · `EmptyView` · `Canvas` · `ColorView` · `Link` · `Tooltip`
+[`Text`](https://applib.dev/docs/2_components/text) · [`Label`](https://applib.dev/docs/2_components/label) · [`Badge`](https://applib.dev/docs/2_components/badge) · [`Image`](https://applib.dev/docs/2_components/image) · [`ProgressView`](https://applib.dev/docs/2_components/progress_view) · [`EmptyState`](https://applib.dev/docs/2_components/empty_state) · [`EmptyView`](https://applib.dev/docs/2_components/empty_view) · [`Canvas`](https://applib.dev/docs/2_components/canvas) · [`ColorView`](https://applib.dev/docs/2_components/color_view) · [`Link`](https://applib.dev/docs/2_components/link) · [`Tooltip`](https://applib.dev/docs/2_components/tooltip)
 
 ## Documentation
 
