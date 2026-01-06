@@ -11,5 +11,8 @@
 // Re-export all components
 pub use crate::components::*;
 
+// Re-export state management primitives
+pub use crate::state::{Binding, State};
+
 // Re-export gpui prelude for convenience
 pub use gpui::prelude::*;

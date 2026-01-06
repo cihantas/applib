@@ -5,11 +5,19 @@
 use gpui::prelude::*;
 use gpui::*;
 
+use crate::state::Binding;
+
 /// A single-line text input component.
 ///
 /// # Example
 ///
 /// ```ignore
+/// // Using a binding (recommended):
+/// TextField::new("search", cx)
+///     .text(State::binding(&self.query, cx))
+///     .placeholder("Search...")
+///
+/// // Using value + on_change (legacy):
 /// TextField::new("branch-name", cx)
 ///     .label("Branch name")
 ///     .placeholder("feature/...")
@@ -25,6 +33,7 @@ pub struct TextField {
     placeholder: SharedString,
     focus_handle: FocusHandle,
     on_change: Option<Box<dyn Fn(&String) + 'static>>,
+    text_binding: Option<Binding<String>>,
 }
 
 impl TextField {
@@ -37,7 +46,24 @@ impl TextField {
             placeholder: "".into(),
             focus_handle: cx.focus_handle(),
             on_change: None,
+            text_binding: None,
         }
+    }
+
+    /// Sets a two-way binding for the text value.
+    ///
+    /// When the user types, the binding is automatically updated.
+    /// The text field also reads its initial value from the binding.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// TextField::new("search", cx)
+    ///     .text(State::binding(&self.query, cx))
+    /// ```
+    pub fn text(mut self, binding: Binding<String>) -> Self {
+        self.text_binding = Some(binding);
+        self
     }
 
     /// Sets the current text value.
@@ -75,6 +101,7 @@ pub struct TextFieldState {
     focus_handle: FocusHandle,
     cursor_position: usize,
     on_change: Option<Box<dyn Fn(&String) + 'static>>,
+    text_binding: Option<Binding<String>>,
 }
 
 impl TextFieldState {
@@ -198,10 +225,16 @@ impl TextFieldState {
             }
         }
 
-        // Notify change
+        // Notify change via callback
         if let Some(ref handler) = self.on_change {
             handler(&self.value);
         }
+
+        // Update binding if present
+        if let Some(ref binding) = self.text_binding {
+            binding.set(self.value.clone(), &mut **cx);
+        }
+
         cx.notify();
     }
 
@@ -218,6 +251,19 @@ impl TextFieldState {
 
 impl Render for TextFieldState {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Sync value from binding if present (enables external updates)
+        if let Some(ref binding) = self.text_binding {
+            let bound_value = binding.get(&**cx);
+            if bound_value != self.value {
+                self.value = bound_value;
+                // Clamp cursor position to valid range
+                let char_count = self.value.chars().count();
+                if self.cursor_position > char_count {
+                    self.cursor_position = char_count;
+                }
+            }
+        }
+
         let is_focused = self.focus_handle.is_focused(window);
         let is_empty = self.value.is_empty();
         let placeholder = self.placeholder.clone();
@@ -342,6 +388,7 @@ impl From<TextField> for TextFieldState {
             focus_handle: builder.focus_handle,
             cursor_position,
             on_change: builder.on_change,
+            text_binding: builder.text_binding,
         }
     }
 }

@@ -59,6 +59,8 @@ use gpui::*;
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use crate::state::Binding;
+
 /// Visual style for the list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ListStyle {
@@ -115,6 +117,8 @@ pub struct List {
     children: Vec<AnyElement>,
     // Search functionality
     search_field: Option<AnyElement>,
+    // Reactive binding for single selection
+    selection_binding: Option<Binding<Option<usize>>>,
 }
 
 impl List {
@@ -131,7 +135,27 @@ impl List {
             focus_handle: None,
             children: Vec::new(),
             search_field: None,
+            selection_binding: None,
         }
+    }
+
+    /// Sets a two-way binding for the selected index (single selection mode).
+    ///
+    /// When the user changes selection, the binding is automatically updated.
+    /// The list also reads its initial selection from the binding.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// List::new("items")
+    ///     .selection(State::binding(&self.selected, cx))
+    ///     .children(items.iter().enumerate().map(|(i, item)| {
+    ///         ListItem::new(("item", i)).child(item.name.clone())
+    ///     }))
+    /// ```
+    pub fn selection(mut self, binding: Binding<Option<usize>>) -> Self {
+        self.selection_binding = Some(binding);
+        self
     }
 
     /// Sets the visual style of the list.
@@ -249,6 +273,7 @@ impl IntoElement for List {
         let on_confirm = self.on_confirm;
         let focus_handle = self.focus_handle.clone();
         let num_children = self.children.len();
+        let selection_binding = self.selection_binding.clone();
 
         // Style-specific settings
         let (bg_color, corner_radius, inset) = match self.style {
@@ -297,7 +322,12 @@ impl IntoElement for List {
                         return;
                     }
 
-                    let current_selection = selected_indices.iter().copied().next();
+                    // Get current selection - prefer binding if present
+                    let current_selection = if let Some(ref binding) = selection_binding {
+                        binding.get(cx)
+                    } else {
+                        selected_indices.iter().copied().next()
+                    };
                     let mut new_selection: Option<usize> = None;
 
                     match event.keystroke.key.as_str() {
@@ -350,6 +380,12 @@ impl IntoElement for List {
                     // Update selection if it changed
                     if let Some(new_idx) = new_selection {
                         if current_selection != Some(new_idx) {
+                            // Update binding if present
+                            if let Some(ref binding) = selection_binding {
+                                binding.set(Some(new_idx), cx);
+                            }
+
+                            // Also call legacy callback if present
                             let new_indices: HashSet<usize> = [new_idx].into_iter().collect();
                             if let Some(ref handler) = on_selection_change {
                                 handler(&new_indices, window, cx);
