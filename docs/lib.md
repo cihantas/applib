@@ -28,6 +28,13 @@ The library organizes components into logical groups based on their purpose: lay
 
 ## Topics
 
+### State Management
+
+Reactive state primitives for building responsive UIs.
+
+- [State<T>](1_state/state.md) — Observable value container with automatic change notification
+- [Binding<T>](1_state/binding.md) — Two-way reference for component bindings
+
 ### Layout
 
 Arrange views and create flexible layouts.
@@ -156,6 +163,13 @@ Present information visually.
 - `StrokeStyle` — Styling for stroked paths.
 
 ### State Management
+
+**Reactive Primitives:**
+
+- [State<T>](1_state/state.md) — Observable state container
+- [Binding<T>](1_state/binding.md) — Two-way bindings
+
+**Component State:**
 
 - `ColorPickerState` — Manages color picker state.
 - `ContextMenuState` — Manages context menu state.

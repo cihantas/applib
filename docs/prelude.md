@@ -16,9 +16,15 @@ fn build_ui(cx: &mut App) -> impl IntoElement {
 }
 ```
 
-The prelude includes all UI components from the `components` module and the GPUI prelude, giving you immediate access to element builders, styling traits, and state management utilities.
+The prelude includes all UI components from the `components` module, state management primitives from the `state` module, and the GPUI prelude, giving you immediate access to element builders, styling traits, and state management utilities.
 
 ## What's Included
+
+### State Management
+
+**Reactive Primitives:**
+- [State<T>](../1_state/state.md) — Observable state container with automatic change notification
+- [Binding<T>](../1_state/binding.md) — Two-way bindings for components
 
 ### Components
 
@@ -87,6 +93,7 @@ The prelude also exports associated types and enums:
 - `TextStyle`, `TextAlign`
 
 **State Management:**
+- `State`, `Binding` — Reactive state primitives
 - `TextFieldState`, `SecureFieldState`, `TextAreaState`
 - `ColorPickerState`, `ContextMenuState`, `TooltipState`, `SliderState`
 
