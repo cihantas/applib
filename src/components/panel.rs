@@ -22,6 +22,18 @@ use anyhow::Result;
 ///     .hide_titlebar()
 ///     .open(cx)
 /// ```
+/// The appearance of the window background.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PanelBackground {
+    /// Opaque background (default).
+    #[default]
+    Opaque,
+    /// Transparent background with alpha.
+    Transparent,
+    /// Transparent with blur effect (may not be supported on all platforms).
+    Blurred,
+}
+
 pub struct Panel<V, F>
 where
     V: Render + 'static,
@@ -35,6 +47,7 @@ where
     centered: bool,
     floating: bool,
     titlebar_hidden: bool,
+    background: PanelBackground,
     _phantom: PhantomData<V>,
 }
 
@@ -67,6 +80,7 @@ where
             centered: false,
             floating: true,
             titlebar_hidden: false,
+            background: PanelBackground::default(),
             _phantom: PhantomData,
         }
     }
@@ -141,6 +155,23 @@ where
         self
     }
 
+    /// Sets the window background appearance.
+    ///
+    /// - `Opaque`: Standard opaque window (default)
+    /// - `Transparent`: Transparent background with alpha
+    /// - `Blurred`: Transparent with blur effect (platform-dependent)
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// Panel::new("panel", |cx| view)
+    ///     .background(PanelBackground::Blurred)
+    /// ```
+    pub fn background(mut self, background: PanelBackground) -> Self {
+        self.background = background;
+        self
+    }
+
     /// Opens the panel window with the configured options.
     ///
     /// This consumes the builder and creates the window, returning a handle
@@ -173,6 +204,12 @@ where
             Bounds::new(Point::default(), window_size)
         };
 
+        let window_background = match self.background {
+            PanelBackground::Opaque => WindowBackgroundAppearance::Opaque,
+            PanelBackground::Transparent => WindowBackgroundAppearance::Transparent,
+            PanelBackground::Blurred => WindowBackgroundAppearance::Blurred,
+        };
+
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             kind: if self.floating {
@@ -190,6 +227,7 @@ where
             } else {
                 None
             },
+            window_background,
             focus: true,
             ..Default::default()
         };
