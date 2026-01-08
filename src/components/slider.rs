@@ -233,11 +233,100 @@ impl IntoElement for Slider {
         // Make the slider interactive if not disabled
         if !disabled {
             track_container = track_container.cursor_pointer();
+
+            // Add click handling if on_change is provided
+            if let Some(on_change) = self.on_change.clone() {
+                let range = self.range.clone();
+                let step = self.step;
+                // Track bounds for mouse position calculations
+                let track_bounds: Rc<Cell<Option<Bounds<Pixels>>>> = Rc::new(Cell::new(None));
+                let bounds_ref = track_bounds.clone();
+
+                // Bounds tracker canvas
+                let bounds_tracker = canvas(
+                    |bounds, _window, _cx| bounds,
+                    move |bounds, _, _window, _cx| {
+                        bounds_ref.set(Some(bounds));
+                    },
+                )
+                .absolute()
+                .size_full();
+
+                // Mouse down handler - update value on click
+                let on_change_down = on_change.clone();
+                let range_down = range.clone();
+                let track_bounds_down = track_bounds.clone();
+                track_container = track_container.on_mouse_down(
+                    MouseButton::Left,
+                    move |event: &MouseDownEvent, window, cx| {
+                        if let Some(bounds) = track_bounds_down.get() {
+                            let relative_x = event.position.x - bounds.origin.x;
+                            let pos = (relative_x / bounds.size.width) as f64;
+                            let new_value = position_to_value(pos, &range_down, step);
+                            on_change_down(new_value, window, cx);
+                        }
+                    },
+                );
+
+                // Mouse move handler - update value while dragging
+                // Uses event.dragging() to check if left mouse button is held,
+                // instead of internal state which gets lost on re-render
+                let on_change_move = on_change.clone();
+                let range_move = range.clone();
+                let track_bounds_move = track_bounds.clone();
+                track_container = track_container.on_mouse_move(
+                    move |event: &MouseMoveEvent, window, cx| {
+                        // Check if left mouse button is currently pressed
+                        if event.dragging() {
+                            if let Some(bounds) = track_bounds_move.get() {
+                                let relative_x = event.position.x - bounds.origin.x;
+                                let pos = (relative_x / bounds.size.width) as f64;
+                                let new_value = position_to_value(pos, &range_move, step);
+                                on_change_move(new_value, window, cx);
+                            }
+                        }
+                    },
+                );
+
+                // Wrap track container with bounds tracker
+                let track_with_bounds = div()
+                    .relative()
+                    .w(track_width)
+                    .h(thumb_size)
+                    .child(track_container)
+                    .child(bounds_tracker);
+
+                // Build the complete slider with optional label
+                let label_color = colors.label;
+
+                return if let Some(label_text) = self.label {
+                    div()
+                        .id(self.id)
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(
+                            div()
+                                .text_sm()
+                                .text_color(label_color)
+                                .child(label_text),
+                        )
+                        .child(track_with_bounds)
+                } else {
+                    div()
+                        .id(self.id)
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .child(track_with_bounds)
+                };
+            }
         } else {
             track_container = track_container.cursor_default();
         }
 
-        // Build the complete slider with optional label
+        // Build the complete slider with optional label (no on_change handler case)
         let label_color = colors.label;
 
         if let Some(label_text) = self.label {
