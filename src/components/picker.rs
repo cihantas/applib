@@ -142,6 +142,12 @@ impl Picker {
     }
 
     /// Builds the Menu style picker (dropdown).
+    ///
+    /// When `on_toggle` is provided, the picker operates in controlled mode where
+    /// the caller manages the open/closed state via `is_open` and `on_toggle`.
+    ///
+    /// When `on_toggle` is not provided, the picker uses hover-based opening
+    /// (similar to the Menu component) for a simpler, stateless usage pattern.
     fn build_menu(self) -> Stateful<Div> {
         let disabled = self.disabled;
         let is_open = self.is_open;
@@ -149,6 +155,7 @@ impl Picker {
         let on_change = self.on_change;
         let on_toggle = self.on_toggle;
         let options = self.options.clone();
+        let has_toggle_handler = on_toggle.is_some();
 
         // Get the selected label
         let selected_label = self
@@ -218,15 +225,15 @@ impl Picker {
             trigger = trigger.cursor_pointer().hover(|style| style.bg(hover_bg));
         }
 
-        // Arrow indicator
+        // Arrow indicator - in hover mode always show down arrow, in controlled mode show state
         let arrow = div()
             .text_xs()
             .text_color(hsla(0.0, 0.0, 0.50, 1.0))
-            .child(if is_open { "▲" } else { "▼" });
+            .child(if has_toggle_handler && is_open { "▲" } else { "▼" });
 
         trigger = trigger.child(selected_label).child(arrow);
 
-        // Add click handler for toggle
+        // Add click handler for toggle (only in controlled mode)
         if !disabled {
             if let Some(handler) = on_toggle {
                 let new_state = !is_open;
@@ -236,11 +243,8 @@ impl Picker {
             }
         }
 
-        // Wrap trigger in relative container for dropdown positioning
-        let mut trigger_container = div().relative().child(trigger);
-
-        // Add dropdown menu if open
-        if is_open && !disabled {
+        // Build the dropdown menu
+        let build_dropdown = |options: Vec<PickerOption>, selected_index: usize, on_change: Option<Rc<dyn Fn(usize, &mut Window, &mut App) + 'static>>| {
             let mut dropdown = div()
                 .absolute()
                 .top_full()
@@ -302,8 +306,34 @@ impl Picker {
                 dropdown = dropdown.child(option_row);
             }
 
-            trigger_container = trigger_container.child(dropdown);
-        }
+            dropdown
+        };
+
+        // Wrap trigger in relative container for dropdown positioning
+        let trigger_container = if has_toggle_handler {
+            // Controlled mode: show dropdown based on is_open state
+            let mut tc = div().relative().child(trigger);
+            if is_open && !disabled {
+                tc = tc.child(build_dropdown(options, selected_index, on_change));
+            }
+            tc
+        } else if !disabled {
+            // Hover mode: use group hover to show dropdown (like Menu component)
+            let dropdown = build_dropdown(options, selected_index, on_change);
+            div()
+                .relative()
+                .group("picker-dropdown")
+                .child(trigger)
+                .child(
+                    div()
+                        .invisible()
+                        .group_hover("picker-dropdown", |style| style.visible())
+                        .child(dropdown),
+                )
+        } else {
+            // Disabled: no dropdown
+            div().relative().child(trigger)
+        };
 
         container.child(trigger_container)
     }
