@@ -9,6 +9,14 @@ List provides a container for displaying items with built-in scrolling, selectio
 The list supports three visual styles (`Plain`, `Inset`, and `Sidebar`) and multiple selection modes (`None`, `Single`, and `Multiple`). When configured with a focus handle, lists respond to keyboard input including arrow keys for navigation and Enter to confirm selections.
 
 ```rust
+// Using a binding (recommended for single selection):
+List::new("items")
+    .selection(State::binding(&self.selected, cx))
+    .children(items.iter().enumerate().map(|(i, item)| {
+        ListItem::new(("item", i)).child(item.name.clone())
+    }))
+
+// Using callbacks (legacy):
 List::new("my-list")
     .style(ListStyle::Inset)
     .selection_mode(SelectionMode::Single)
@@ -63,6 +71,7 @@ impl Render for MyView {
 
 ### Managing Selection
 
+- `selection(_:)` — Sets a two-way binding for single selection (recommended).
 - `selection_mode(_:)` — Sets the selection mode (None, Single, or Multiple).
 - `selected(_:)` — Sets the currently selected indices.
 - `selected_index(_:)` — Sets a single selected index for single selection mode.
@@ -147,6 +156,8 @@ Keyboard navigation is only active when the selection mode is not `None`.
 
 ## See Also
 
+- [State<T>](../1_state/state.md) — Observable state for reactive bindings
+- [Binding<T>](../1_state/binding.md) — Two-way binding primitive
 - ListItem
 - TextField
 - Table
