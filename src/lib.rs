@@ -109,3 +109,4 @@ pub mod utils;
 
 // Re-export all components at crate root for convenience
 pub use components::*;
+pub use state::{Binding, State};
