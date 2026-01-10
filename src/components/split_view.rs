@@ -14,6 +14,20 @@ use gpui::*;
 use std::cell::Cell;
 use std::rc::Rc;
 
+/// Marker type for split view divider drag state
+#[derive(Clone)]
+struct SplitDividerDrag;
+
+/// Invisible drag ghost view (required by GPUI's drag API)
+struct DragGhost;
+
+impl Render for DragGhost {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        // Invisible - we don't want a visual drag preview for split resizing
+        div().w(px(0.0)).h(px(0.0))
+    }
+}
+
 /// Orientation of the split view
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SplitOrientation {
@@ -183,8 +197,7 @@ pub struct SplitViewState {
     first_content: Option<AnyElement>,
     second_content: Option<AnyElement>,
 
-    // Drag state
-    is_dragging: bool,
+    // Container bounds for coordinate calculation
     container_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
 }
 
@@ -208,71 +221,19 @@ impl SplitViewState {
     pub fn set_second(&mut self, content: impl IntoElement) {
         self.second_content = Some(content.into_any_element());
     }
-
-    /// Handle mouse down on divider - start dragging.
-    fn handle_mouse_down(
-        &mut self,
-        _event: &MouseDownEvent,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.is_dragging = true;
-        cx.notify();
-    }
-
-    /// Handle mouse move - update size if dragging.
-    fn handle_mouse_move(
-        &mut self,
-        event: &MouseMoveEvent,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if !self.is_dragging {
-            return;
-        }
-
-        if let Some(bounds) = self.container_bounds.get() {
-            let new_size = match self.orientation {
-                SplitOrientation::Horizontal => {
-                    event.position.x - bounds.origin.x
-                }
-                SplitOrientation::Vertical => {
-                    event.position.y - bounds.origin.y
-                }
-            };
-
-            let clamped = new_size.clamp(self.min_first_size, self.max_first_size);
-
-            if clamped != self.first_size {
-                self.first_size = clamped;
-
-                if let Some(ref handler) = self.on_resize {
-                    handler(self.first_size, window, cx);
-                }
-
-                cx.notify();
-            }
-        }
-    }
-
-    /// Handle mouse up - stop dragging.
-    fn handle_mouse_up(
-        &mut self,
-        _event: &MouseUpEvent,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.is_dragging = false;
-        cx.notify();
-    }
 }
 
 impl Render for SplitViewState {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_horizontal = self.orientation == SplitOrientation::Horizontal;
+        let orientation = self.orientation;
+        let min_size = self.min_first_size;
+        let max_size = self.max_first_size;
+        let on_resize = self.on_resize.clone();
 
         // Container with bounds tracking
         let bounds_ref = self.container_bounds.clone();
+        let bounds_ref_for_drag = self.container_bounds.clone();
         let bounds_tracker = canvas(
             |bounds, _window, _cx| bounds,
             move |bounds, _, _window, _cx| {
@@ -318,7 +279,7 @@ impl Render for SplitViewState {
             CursorStyle::ResizeUpDown
         };
 
-        let mut divider_hit = if is_horizontal {
+        let divider_hit = if is_horizontal {
             div()
                 .id("split-divider")
                 .w(px(DIVIDER_HIT_AREA))
@@ -342,12 +303,37 @@ impl Render for SplitViewState {
                 .child(divider_visual)
         };
 
-        // Add drag event handlers
-        divider_hit = divider_hit
-            .on_mouse_down(MouseButton::Left, cx.listener(Self::handle_mouse_down))
-            .on_mouse_move(cx.listener(Self::handle_mouse_move))
-            .on_mouse_up(MouseButton::Left, cx.listener(Self::handle_mouse_up))
-            .on_mouse_up_out(MouseButton::Left, cx.listener(Self::handle_mouse_up));
+        // Use GPUI's drag API for proper global mouse capture during drag
+        let divider_hit = divider_hit
+            .on_drag(SplitDividerDrag, |_drag, _offset, _window, cx| {
+                cx.new(|_| DragGhost)
+            })
+            .on_drag_move(cx.listener(
+                move |this, event: &DragMoveEvent<SplitDividerDrag>, window, cx| {
+                    if let Some(bounds) = bounds_ref_for_drag.get() {
+                        let new_size = match orientation {
+                            SplitOrientation::Horizontal => {
+                                event.event.position.x - bounds.origin.x
+                            }
+                            SplitOrientation::Vertical => {
+                                event.event.position.y - bounds.origin.y
+                            }
+                        };
+
+                        let clamped = new_size.clamp(min_size, max_size);
+
+                        if clamped != this.first_size {
+                            this.first_size = clamped;
+
+                            if let Some(ref handler) = on_resize {
+                                handler(this.first_size, window, cx);
+                            }
+
+                            cx.notify();
+                        }
+                    }
+                },
+            ));
 
         // Second pane
         let mut second_pane = div()
@@ -393,7 +379,6 @@ impl From<SplitView> for SplitViewState {
             on_resize: builder.on_resize,
             first_content: None,
             second_content: None,
-            is_dragging: false,
             container_bounds: Rc::new(Cell::new(None)),
         }
     }

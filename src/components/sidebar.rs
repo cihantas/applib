@@ -10,6 +10,9 @@ use gpui::*;
 /// Provides a vertical navigation panel with source list styling,
 /// including gradient background and proper spacing.
 ///
+/// Sidebar fills its parent container (SwiftUI pattern). When used in a
+/// SplitView, the split view controls the width.
+///
 /// # Example
 ///
 /// ```ignore
@@ -18,23 +21,15 @@ use gpui::*;
 ///     .child(SidebarSection::new("branches", "BRANCHES"))
 /// ```
 pub struct Sidebar {
-    width: Pixels,
     children: Vec<AnyElement>,
 }
 
 impl Sidebar {
-    /// Creates a new sidebar with default width (200px).
+    /// Creates a new sidebar.
     pub fn new() -> Self {
         Self {
-            width: px(200.0),
             children: Vec::new(),
         }
-    }
-
-    /// Sets the sidebar width.
-    pub fn width(mut self, width: impl Into<Pixels>) -> Self {
-        self.width = width.into();
-        self
     }
 
     /// Adds a child element to the sidebar.
@@ -64,15 +59,12 @@ impl IntoElement for Sidebar {
         div()
             .flex()
             .flex_col()
-            .w(self.width)
-            .h_full()
+            .size_full()
             .gap(px(4.0))
             .p(px(8.0))
             // Source list background - light blue-gray
+            // Note: No border - SplitView handles the separator (SwiftUI pattern)
             .bg(hsla(210.0 / 360.0, 0.08, 0.93, 1.0))
-            // Right border to separate from content
-            .border_r_1()
-            .border_color(hsla(0.0, 0.0, 0.80, 1.0))
             .children(self.children)
     }
 }
