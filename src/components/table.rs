@@ -103,7 +103,7 @@ impl IntoElement for Table {
             .id(self.id)
             .flex()
             .flex_col()
-            .flex_1()
+            .w_full()
             .bg(hsla(0.0, 0.0, 1.0, 1.0));
 
         for row in self.rows {

@@ -105,7 +105,7 @@ pub use spacer::Spacer;
 pub use sidebar::Sidebar;
 pub use stepper::Stepper;
 pub use sidebar_item::SidebarItem;
-pub use split_view::SplitView;
+pub use split_view::{SplitView, SplitViewState};
 pub use table::{Table, TableColumn};
 pub use table_row::TableRow;
 pub use tab_view::{Tab, TabView};
