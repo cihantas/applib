@@ -23,12 +23,12 @@ use super::label::Icon;
 ///     .on_select(|| println!("Copy clicked"))
 /// ```
 pub struct MenuItem {
-    id: ElementId,
-    label: SharedString,
-    icon: Option<Icon>,
-    shortcut: Option<SharedString>,
-    disabled: bool,
-    on_select: Option<Box<dyn Fn(&mut Window, &mut App) + 'static>>,
+    pub(crate) id: ElementId,
+    pub(crate) label: SharedString,
+    pub(crate) icon: Option<Icon>,
+    pub(crate) shortcut: Option<SharedString>,
+    pub(crate) disabled: bool,
+    pub(crate) on_select: Option<Box<dyn Fn(&mut Window, &mut App) + 'static>>,
 }
 
 impl MenuItem {

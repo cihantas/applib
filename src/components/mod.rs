@@ -68,7 +68,7 @@ pub use canvas::{
 };
 pub use checkbox::Checkbox;
 pub use color_picker::{ColorPicker, ColorPickerState};
-pub use context_menu::{ContextMenu, ContextMenuState};
+pub use context_menu::ContextMenu;
 pub use color_view::ColorView;
 pub use date_picker::{DateComponents, DatePicker, DatePickerStyle};
 pub use disclosure_group::DisclosureGroup;

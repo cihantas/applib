@@ -272,6 +272,13 @@ impl IntoElement for Table {
                     let row_height = px(24.0);
                     let border_color = hsla(0.0, 0.0, 0.85, 1.0);
 
+                    // Default text colors (like SwiftUI)
+                    let text_color = if is_selected {
+                        gpui::white()
+                    } else {
+                        hsla(0.0, 0.0, 0.20, 1.0)
+                    };
+
                     let mut row = div()
                         .id(("table-row", index))
                         .flex()
@@ -279,10 +286,13 @@ impl IntoElement for Table {
                         .items_center()
                         .w_full()
                         .h(row_height)
-                        .px(px(16.0))
+                        .px(px(8.0))
                         .border_b_1()
                         .border_color(border_color)
-                        .cursor_pointer();
+                        .cursor_pointer()
+                        // Default text styling (like SwiftUI Table)
+                        .text_xs()
+                        .text_color(text_color);
 
                     // Apply selection styling
                     row = if is_selected {
@@ -294,13 +304,23 @@ impl IntoElement for Table {
 
                     // Add cells with column widths
                     // Each cell is truncated with ellipsis (like SwiftUI's .lineLimit(1))
+                    // min_w(0) on flex cells allows them to shrink below content size
                     for (i, cell) in cells.into_iter().enumerate() {
                         let cell_container = match columns_for_render.get(i) {
                             Some(TableColumn::Fixed(width)) => div()
                                 .w(*width)
                                 .flex_shrink_0()
-                                .truncate(),
-                            Some(TableColumn::Flex) | None => div().flex_1().truncate(),
+                                .overflow_hidden()
+                                .whitespace_nowrap()
+                                .text_ellipsis()
+                                .px(px(4.0)),
+                            Some(TableColumn::Flex) | None => div()
+                                .flex_1()
+                                .min_w(px(0.0))
+                                .overflow_hidden()
+                                .whitespace_nowrap()
+                                .text_ellipsis()
+                                .px(px(4.0)),
                         };
                         row = row.child(cell_container.child(cell));
                     }
@@ -332,8 +352,10 @@ impl IntoElement for Table {
             list_element
         };
 
-        // Style the list
-        let list_element = list_element.flex_1().w_full();
+        // Style the list - use size_full() like GPUI data_table example
+        // Wrapping in relative container establishes proper bounds for virtualization
+        let list_element = list_element.size_full();
+        let list_wrapper = div().relative().size_full().child(list_element);
 
         // Create container
         let mut container = div()
@@ -421,6 +443,6 @@ impl IntoElement for Table {
             );
         }
 
-        container.child(list_element)
+        container.child(list_wrapper)
     }
 }

@@ -9,7 +9,7 @@ use applib::{
     IconButtonStyle, Label, Link, List, ListItem, ListStyle, Menu, MenuItem,
     NavigationSplitView, Picker, ProgressStyle, ProgressView, RadioGroup, ScrollView,
     Section, Sheet, SidebarItem, Slider, Spacer, Stepper, Tab, TabView, Table, TableColumn,
-    TableRow, Text, TextAlign, TextStyle, TitleBar, Toggle, ToggleStyle, VStack,
+    Text, TextAlign, TextStyle, TitleBar, Toggle, ToggleStyle, VStack,
     WindowFrame, ZStack, ZStackAlignment,
 };
 use gpui::*;
@@ -583,19 +583,14 @@ impl ShowcaseView {
                     .h(px(100.0))
                     .overflow_hidden()
                     .child(
-                        Table::new("table-demo")
-                            .column(TableColumn::flex())
-                            .column(TableColumn::fixed(px(80.0)))
-                            .row(
-                                TableRow::new(("row", 0usize))
-                                    .cell(Text::new("Item A"))
-                                    .cell(Text::new("$10.00")),
-                            )
-                            .row(
-                                TableRow::new(("row", 1usize))
-                                    .cell(Text::new("Item B"))
-                                    .cell(Text::new("$25.00")),
-                            ),
+                        Table::new("table-demo", 2, |index, _selected, _window, _cx| {
+                            let items = [("Item A", "$10.00"), ("Item B", "$25.00")];
+                            vec![
+                                Text::new(items[index].0).into_any_element(),
+                                Text::new(items[index].1).into_any_element(),
+                            ]
+                        })
+                        .columns([TableColumn::flex(), TableColumn::fixed(px(80.0))]),
                     ),
             ))
             .child(Self::section_header("TABVIEW"))
