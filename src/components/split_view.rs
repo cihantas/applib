@@ -14,6 +14,13 @@ use gpui::*;
 use std::cell::Cell;
 use std::rc::Rc;
 
+// Track which SplitView entity is currently being dragged.
+// This ensures only one SplitView responds to drag events at a time,
+// similar to how SwiftUI isolates gestures per view.
+thread_local! {
+    static ACTIVE_SPLIT_DRAGGER: Cell<Option<EntityId>> = const { Cell::new(None) };
+}
+
 /// Marker type for split view divider drag state
 #[derive(Clone)]
 struct SplitDividerDrag;
@@ -303,13 +310,26 @@ impl Render for SplitViewState {
                 .child(divider_visual)
         };
 
-        // Use GPUI's drag API for proper global mouse capture during drag
+        // Use GPUI's drag API for proper global mouse capture during drag.
+        // We use a thread-local to track which SplitView initiated the drag,
+        // ensuring only that SplitView responds to drag move events.
+        let entity_id = cx.entity().entity_id();
         let divider_hit = divider_hit
-            .on_drag(SplitDividerDrag, |_drag, _offset, _window, cx| {
-                cx.new(|_| DragGhost)
+            .on_drag(SplitDividerDrag, move |_drag, _offset, _window, _cx| {
+                // Mark THIS split view as the active dragger
+                ACTIVE_SPLIT_DRAGGER.with(|cell| cell.set(Some(entity_id)));
+                _cx.new(|_| DragGhost)
             })
             .on_drag_move(cx.listener(
                 move |this, event: &DragMoveEvent<SplitDividerDrag>, window, cx| {
+                    // Only process if THIS split view initiated the drag
+                    let is_active = ACTIVE_SPLIT_DRAGGER.with(|cell| {
+                        cell.get() == Some(cx.entity().entity_id())
+                    });
+                    if !is_active {
+                        return;
+                    }
+
                     if let Some(bounds) = bounds_ref_for_drag.get() {
                         let new_size = match orientation {
                             SplitOrientation::Horizontal => {
