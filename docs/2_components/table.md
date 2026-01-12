@@ -1,33 +1,43 @@
 # Table
 
-A table component for displaying data in aligned columns with consistent widths.
+A virtualized table component for displaying data in aligned columns with keyboard navigation.
 
 ## Overview
 
-Table manages column definitions and renders rows with consistent column widths across all rows. It provides polished styling with selection states and hover effects, designed for displaying structured tabular data.
-
-Columns can be configured as either fixed-width or flexible (growing to fill available space). Multiple flexible columns share space proportionally. The table works with `TableRow` components to render each row's content.
+Table displays structured data in columns using GPUI's `uniform_list` for virtualized rendering. Rows are rendered on-demand via a callback function, providing efficient performance for large datasets.
 
 ```rust
-let mut table = Table::new("commits")
-    .column(TableColumn::flex())           // Message column (grows)
-    .column(TableColumn::fixed(px(150.0))) // Author column
-    .column(TableColumn::fixed(px(80.0)))  // Hash column
-    .column(TableColumn::fixed(px(120.0))); // Date column
+struct CommitView {
+    commits: Vec<Commit>,
+    selected: Entity<State<Option<usize>>>,
+    scroll_handle: UniformListScrollHandle,
+    focus_handle: FocusHandle,
+}
 
-for (index, commit) in commits.iter().enumerate() {
-    table = table.row(
-        TableRow::new(("commit", index))
-            .selected(selected_index == Some(index))
-            .on_click(cx.listener(move |this, _event, _window, cx| {
-                this.selected_index = Some(index);
-                cx.notify();
-            }))
-            .cell(div().child(commit.message.clone()))
-            .cell(div().child(commit.author.clone()))
-            .cell(div().child(commit.hash.clone()))
-            .cell(div().child(commit.date.clone()))
-    );
+impl Render for CommitView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let commits = self.commits.clone();
+
+        Table::new("commits", self.commits.len(), move |index, selected, _window, _cx| {
+            let commit = &commits[index];
+            vec![
+                div().child(commit.message.clone()).into_any_element(),
+                div().child(commit.author.clone()).into_any_element(),
+                div().child(commit.hash.clone()).into_any_element(),
+            ]
+        })
+        .columns([
+            TableColumn::flex(),
+            TableColumn::fixed(px(150.0)),
+            TableColumn::fixed(px(80.0)),
+        ])
+        .selection(State::binding(&self.selected, cx))
+        .focusable(self.focus_handle.clone())
+        .track_scroll(self.scroll_handle.clone())
+        .on_confirm(|index, _window, _cx| {
+            println!("Confirmed row {}", index);
+        })
+    }
 }
 ```
 
@@ -35,45 +45,131 @@ for (index, commit) in commits.iter().enumerate() {
 
 ### Creating a Table
 
-- `new(_:)` — Creates a table with the given identifier.
+- `new(_:_:_:)` - Creates a table with an id, row count, and cell render callback.
 
 ### Configuring Columns
 
-- `column(_:)` — Adds a column definition to the table.
+- `columns(_:)` - Sets the column definitions for the table.
 
-### Adding Content
+### Selection and Navigation
 
-- `row(_:)` — Adds a row to the table.
+- `selection(_:)` - Sets a two-way binding for the selected row index.
+- `focusable(_:)` - Makes the table focusable and enables keyboard navigation.
+- `track_scroll(_:)` - Connects a scroll handle for scroll-to-selection support.
 
-## Supporting Types
+### Event Handling
 
-### TableColumn
+- `on_confirm(_:)` - Sets the handler called when Enter is pressed on a selected row.
+- `on_row_right_click(_:)` - Sets the handler called when right-clicking a row.
 
-Defines how a column should be sized within the table.
+## Callback-Based Rendering
 
-- `Fixed(Pixels)` — Column with a fixed pixel width.
-- `Flex` — Column that grows to fill available space.
+The table uses a callback to render cells for each visible row. The callback receives:
+- `index` - The row index (0-based)
+- `selected` - Whether this row is currently selected
+- `window` - The window context
+- `cx` - The app context
 
-#### Creating Column Definitions
+Return a `Vec<AnyElement>` with one element per column:
 
-- `fixed(_:)` — Creates a fixed-width column.
-- `flex()` — Creates a flexible column that grows to fill available space.
+```rust
+Table::new("items", items.len(), |index, selected, _window, _cx| {
+    vec![
+        div().child(items[index].name.clone()).into_any_element(),
+        div().child(items[index].value.to_string()).into_any_element(),
+    ]
+})
+```
 
-Multiple flex columns in the same table will share the available space equally.
+## Column Definitions
 
-## Layout Behavior
+Configure columns using `TableColumn`:
 
-The table applies column widths to cells in the order they are added. Each cell is wrapped in a container that applies the appropriate width constraint:
+```rust
+.columns([
+    TableColumn::flex(),           // Grows to fill space
+    TableColumn::fixed(px(150.0)), // Fixed 150px width
+    TableColumn::fixed(px(80.0)),  // Fixed 80px width
+])
+```
 
-- **Fixed columns** — Set to exact pixel width with `flex_shrink_0` to prevent shrinking.
-- **Flex columns** — Set to `flex_1` to grow and fill available space.
+- **Fixed columns** - Exact pixel width, won't shrink
+- **Flex columns** - Grow to fill available space, share proportionally
 
-Cells automatically hide overflow content to maintain column boundaries.
+## Selection with Bindings
 
-The number of cells in each row should match the number of columns defined. If a row has fewer cells than columns, the missing cells are skipped. If a row has more cells than columns, extra cells are rendered as flexible.
+Use a `Binding<Option<usize>>` for two-way selection state:
+
+```rust
+struct MyView {
+    selected: Entity<State<Option<usize>>>,
+}
+
+impl Render for MyView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        Table::new("items", count, render)
+            .selection(State::binding(&self.selected, cx))
+    }
+}
+```
+
+Clicking a row or using keyboard navigation updates the binding automatically.
+
+## Keyboard Navigation
+
+Enable keyboard navigation with `focusable()`:
+
+```rust
+Table::new("items", count, render)
+    .selection(selection_binding)
+    .focusable(self.focus_handle.clone())
+```
+
+Supported keys:
+- **Up/Down** - Move selection
+- **Cmd+Up/Cmd+Down** - Jump to first/last row
+- **Enter** - Trigger `on_confirm` callback
+
+## Scroll Tracking
+
+Connect a scroll handle to automatically scroll to the selection:
+
+```rust
+struct MyView {
+    scroll_handle: UniformListScrollHandle,
+}
+
+impl MyView {
+    fn new() -> Self {
+        Self {
+            scroll_handle: UniformListScrollHandle::new(),
+        }
+    }
+}
+
+// In render:
+Table::new("items", count, render)
+    .track_scroll(self.scroll_handle.clone())
+```
+
+## Context Menu Support
+
+Use `on_row_right_click` to handle right-clicks for context menus:
+
+```rust
+Table::new("items", count, render)
+    .on_row_right_click(cx.listener(|this, (index, position), _window, cx| {
+        this.context_menu_row = Some(index);
+        this.context_menu_position = Some(position);
+        cx.notify();
+    }))
+```
+
+The handler receives the row index and click position in window coordinates.
 
 ## See Also
 
 - TableRow
 - List
-- LazyVGrid
+- State
+- Binding

@@ -1,74 +1,146 @@
 # SplitView
 
-A two-pane layout container with horizontal or vertical orientation.
+A stateful two-pane layout with a draggable divider for resizing.
 
 ## Overview
 
-SplitView divides its space between two panes separated by a 1-pixel divider. Panes can be arranged side-by-side (horizontal) or stacked top-to-bottom (vertical).
+SplitView provides a resizable two-pane layout with a draggable divider. It manages its own internal state via `SplitViewState` and is used as an `Entity` in your parent view.
 
 ```rust
-use applib::components::{SplitView, SplitOrientation};
+struct MyView {
+    split: Entity<SplitViewState>,
+}
 
-// Horizontal split with fixed left pane
-SplitView::horizontal()
-    .first(sidebar_content)
-    .second(main_content)
-    .first_size(px(250.0))
-```
+impl MyView {
+    fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            split: cx.new(|_| SplitViewState::from(
+                SplitView::horizontal()
+                    .first_size(px(250.0))
+                    .min_first_size(px(150.0))
+                    .max_first_size(px(400.0))
+            )),
+        }
+    }
+}
 
-By default, when no first pane size is specified, both panes share the available space equally using flex layout. Setting a fixed size for the first pane makes it rigid while the second pane takes all remaining space.
+impl Render for MyView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.split.update(cx, |split, _| {
+            split.set_first(sidebar_content);
+            split.set_second(main_content);
+        });
 
-## Choosing an Orientation
-
-Create a horizontal split for side-by-side panes:
-
-```rust
-SplitView::horizontal()
-    .first(left_pane)
-    .second(right_pane)
-```
-
-Create a vertical split for stacked panes:
-
-```rust
-SplitView::vertical()
-    .first(top_pane)
-    .second(bottom_pane)
+        self.split.clone()
+    }
+}
 ```
 
 ## Topics
 
 ### Creating a SplitView
 
-- `horizontal()` — Creates a new horizontal split view (side-by-side panes).
-- `vertical()` — Creates a new vertical split view (stacked panes).
+- `SplitView::horizontal()` - Creates a horizontal split (side-by-side panes).
+- `SplitView::vertical()` - Creates a vertical split (stacked panes).
 
-### Configuring Content
+### Configuring Size
 
-- `first(_:)` — Sets the first (left or top) pane content.
-- `second(_:)` — Sets the second (right or bottom) pane content.
+- `first_size(_:)` - Sets the initial size for the first pane.
+- `min_first_size(_:)` - Sets the minimum size for the first pane.
+- `max_first_size(_:)` - Sets the maximum size for the first pane.
 
-### Controlling Size
+### Styling
 
-- `first_size(_:)` — Sets a fixed size for the first pane.
+- `divider_color(_:)` - Sets the divider color.
 
-### Styling the Divider
+### Events
 
-- `divider_color(_:)` — Sets the divider color.
+- `on_resize(_:)` - Sets a callback when the user resizes the panes.
 
-## Size Behavior
+### SplitViewState Methods
 
-When `first_size()` is set:
-- The first pane has a fixed width (horizontal) or height (vertical)
-- The second pane fills remaining space
-- The first pane will not shrink when the container is resized
+- `first_size()` - Gets the current first pane size.
+- `set_first_size(_:)` - Sets the first pane size programmatically.
+- `set_first(_:)` - Sets the first pane content (call each render).
+- `set_second(_:)` - Sets the second pane content (call each render).
 
-When `first_size()` is not set:
-- Both panes share space equally using flex: 1
-- Both panes resize proportionally when the container changes size
+## Builder Pattern
+
+Use `SplitView` as a builder, then convert to `SplitViewState` for use as an Entity:
+
+```rust
+// Create the builder
+let builder = SplitView::horizontal()
+    .first_size(px(250.0))
+    .min_first_size(px(150.0))
+    .max_first_size(px(400.0));
+
+// Convert to state and wrap in Entity
+let split = cx.new(|_| SplitViewState::from(builder));
+```
+
+## Setting Content Each Render
+
+Because `SplitViewState` is an Entity, you must set content each render cycle:
+
+```rust
+impl Render for MyView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Update content each render
+        self.split.update(cx, |split, _| {
+            split.set_first(div().child("Left pane"));
+            split.set_second(div().child("Right pane"));
+        });
+
+        // Return the entity (it implements IntoElement via Render)
+        self.split.clone()
+    }
+}
+```
+
+## Resize Callback
+
+Get notified when the user drags the divider:
+
+```rust
+SplitView::horizontal()
+    .first_size(px(250.0))
+    .on_resize(|new_size, _window, _cx| {
+        println!("Resized to: {:?}", new_size);
+        // Persist the size, update other state, etc.
+    })
+```
+
+## Programmatic Resizing
+
+Update the split size from code:
+
+```rust
+self.split.update(cx, |split, cx| {
+    split.set_first_size(px(300.0));
+    cx.notify();
+});
+```
+
+## Nested Split Views
+
+Split views can be nested. Each SplitView instance manages its own drag state independently - dragging a nested divider won't affect parent split views.
+
+```rust
+// Inner split (vertical)
+let inner_split = cx.new(|_| SplitViewState::from(
+    SplitView::vertical().first_size(px(200.0))
+));
+
+// Outer split (horizontal) with inner split as second pane
+self.outer_split.update(cx, |split, _| {
+    split.set_first(sidebar);
+    split.set_second(inner_split.clone());
+});
+```
 
 ## See Also
 
-- ScrollView
+- NavigationSplitView
 - Panel
-- Form
+- ScrollView

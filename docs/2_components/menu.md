@@ -128,6 +128,12 @@ impl Render for MyView {
 }
 ```
 
+The menu automatically closes when:
+- An item is selected
+- The user clicks outside the menu (backdrop click)
+
+The `on_toggle` callback receives `false` in both cases, so you don't need separate handling.
+
 ## See Also
 
 - ContextMenu
