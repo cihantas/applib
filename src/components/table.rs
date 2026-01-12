@@ -112,6 +112,7 @@ pub struct Table {
     scroll_handle: Option<UniformListScrollHandle>,
     selection_binding: Option<Binding<Option<usize>>>,
     on_confirm: Option<Rc<dyn Fn(usize, &mut Window, &mut App) + 'static>>,
+    on_row_right_click: Option<Rc<dyn Fn(usize, Point<Pixels>, &mut Window, &mut App) + 'static>>,
     focus_handle: Option<FocusHandle>,
 }
 
@@ -149,6 +150,7 @@ impl Table {
             scroll_handle: None,
             selection_binding: None,
             on_confirm: None,
+            on_row_right_click: None,
             focus_handle: None,
         }
     }
@@ -216,6 +218,27 @@ impl Table {
         self
     }
 
+    /// Sets the handler called when the user right-clicks on a row.
+    ///
+    /// The handler receives the row index and the click position (in window coordinates),
+    /// which can be used to open a context menu.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// Table::new("items", count, render)
+    ///     .on_row_right_click(|index, position, _window, cx| {
+    ///         // Open context menu at position for row `index`
+    ///     })
+    /// ```
+    pub fn on_row_right_click(
+        mut self,
+        handler: impl Fn(usize, Point<Pixels>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_row_right_click = Some(Rc::new(handler));
+        self
+    }
+
     /// Makes the table focusable and enables keyboard navigation.
     ///
     /// When focusable, the table responds to:
@@ -238,6 +261,7 @@ impl IntoElement for Table {
         let columns = Rc::new(self.columns);
         let selection_binding = self.selection_binding.clone();
         let on_confirm = self.on_confirm.clone();
+        let on_row_right_click = self.on_row_right_click.clone();
         let scroll_handle = self.scroll_handle.clone();
 
         // Shared state for selection that can be accessed in closures
@@ -250,6 +274,7 @@ impl IntoElement for Table {
         let scroll_handle_for_render = scroll_handle.clone();
         let scroll_handle_for_keydown = scroll_handle.clone();
         let columns_for_render = columns.clone();
+        let on_row_right_click_for_render = on_row_right_click.clone();
 
         // Create the uniform list with click-to-select rows
         let list_element = uniform_list(id.clone(), row_count, move |range, window, cx| {
@@ -328,10 +353,11 @@ impl IntoElement for Table {
                     // Add click handler for selection
                     let selection_binding_for_click = selection_binding_for_render.clone();
                     let scroll_handle_for_click = scroll_handle_for_render.clone();
+                    let on_row_right_click_for_row = on_row_right_click_for_render.clone();
 
                     // Use a bottom border on the container instead of a separate separator element
                     // This avoids sub-pixel rendering issues with thin separate divs
-                    row.on_mouse_down(MouseButton::Left, move |_event, window, cx| {
+                    row = row.on_mouse_down(MouseButton::Left, move |_event, window, cx| {
                         if let Some(ref binding) = selection_binding_for_click {
                             binding.set(Some(index), cx);
                         }
@@ -339,8 +365,16 @@ impl IntoElement for Table {
                             handle.scroll_to_item(index, ScrollStrategy::Center);
                         }
                         window.refresh();
-                    })
-                    .into_any_element()
+                    });
+
+                    // Add right-click handler if provided
+                    if let Some(handler) = on_row_right_click_for_row {
+                        row = row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                            handler(index, event.position, window, cx);
+                        });
+                    }
+
+                    row.into_any_element()
                 })
                 .collect()
         });
