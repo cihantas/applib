@@ -5,6 +5,9 @@ A native application framework for building Linux desktop applications.
 > [!WARNING]
 > **This project is experimental and in alpha.** I'm actively building and iterating on AppLib, so expect things to change—sometimes quickly. If you run into rough edges or missing features, know that I'm working on it. Things should improve rapidly as development continues.
 
+> [!NOTE]
+> **AI Disclaimer:** I use AI to help with some of my work on this project. I write some code myself, can still read and understand what code written by AI does, and I do review it.
+
 AppLib provides the foundation for creating polished, high-performance desktop apps with a complete set of UI components, window management, and system integration.
 
 ## Features
