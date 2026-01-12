@@ -560,6 +560,8 @@ impl IntoElement for ControlledMenu {
     type Element = Stateful<Div>;
 
     fn into_element(self) -> Self::Element {
+        use std::rc::Rc;
+
         let panel_bg = hsla(0.0, 0.0, 1.0, 1.0);
         let border_color = hsla(0.0, 0.0, 0.78, 1.0);
         let shadow_color = hsla(0.0, 0.0, 0.0, 0.15);
@@ -568,6 +570,10 @@ impl IntoElement for ControlledMenu {
         let disabled = self.disabled;
         let label = self.label.clone();
         let id = self.id;
+
+        // Wrap on_toggle in Rc for sharing
+        let on_toggle: Option<Rc<Box<dyn Fn(&bool, &mut Window, &mut App) + 'static>>> =
+            self.on_toggle.map(Rc::new);
 
         // Build button colors
         let colors = if disabled {
@@ -617,10 +623,11 @@ impl IntoElement for ControlledMenu {
                 .hover(move |style| style.bg(colors.bg_hover));
 
             // Add click handler to toggle menu
-            if let Some(toggle_handler) = self.on_toggle {
+            if let Some(ref toggle_handler) = on_toggle {
+                let toggle_for_button = toggle_handler.clone();
                 let new_state = !is_open;
                 button = button.on_click(move |_event, window, cx| {
-                    toggle_handler(&new_state, window, cx);
+                    toggle_for_button(&new_state, window, cx);
                 });
             }
         }
@@ -642,12 +649,18 @@ impl IntoElement for ControlledMenu {
 
         // Add menu panel if open
         if is_open {
+            // Create dismiss handler that closes the menu
+            let on_dismiss: Rc<dyn Fn(&mut Window, &mut App) + 'static> = if let Some(ref toggle) = on_toggle {
+                let toggle_for_dismiss = toggle.clone();
+                Rc::new(move |window, cx| {
+                    toggle_for_dismiss(&false, window, cx);
+                })
+            } else {
+                Rc::new(|_window, _cx| {})
+            };
+
             // Build menu panel
             let mut panel = div()
-                .absolute()
-                .top_full()
-                .left(px(0.0))
-                .mt(px(4.0))
                 .min_w(px(180.0))
                 .bg(panel_bg)
                 .rounded(px(6.0))
@@ -665,17 +678,15 @@ impl IntoElement for ControlledMenu {
             for content in self.items {
                 match content {
                     MenuContent::Item(item) => {
-                        let dismiss = |_window: &mut Window, _cx: &mut App| {
-                            // Dismiss is handled by the parent view
-                        };
-                        panel = panel.child(Menu::build_menu_item(item, dismiss));
+                        let dismiss = on_dismiss.clone();
+                        panel = panel.child(Menu::build_menu_item(item, move |window, cx| dismiss(window, cx)));
                     }
                     MenuContent::Divider => {
                         panel = panel.child(Menu::build_divider());
                     }
                     MenuContent::Submenu { id, label, icon, items } => {
-                        let dismiss = |_window: &mut Window, _cx: &mut App| {};
-                        let submenu_panel = Menu::build_submenu_panel(&items, dismiss);
+                        let dismiss = on_dismiss.clone();
+                        let submenu_panel = Menu::build_submenu_panel(&items, move |window, cx| dismiss(window, cx));
                         panel = panel.child(
                             div()
                                 .relative()
@@ -692,15 +703,35 @@ impl IntoElement for ControlledMenu {
                 }
             }
 
-            // Wrap panel with click-outside handling
-            let panel_container = div()
-                .id("menu-panel-container")
-                .on_mouse_down(MouseButton::Left, |_event, _window, cx| {
-                    cx.stop_propagation();
-                })
-                .child(panel);
+            // Backdrop to catch clicks outside the menu
+            let on_dismiss_for_backdrop = on_dismiss.clone();
+            let backdrop = div()
+                .absolute()
+                .top(px(0.0))
+                .left(px(0.0))
+                .w(px(10000.0))
+                .h(px(10000.0))
+                .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
+                    on_dismiss_for_backdrop(window, cx);
+                });
 
-            container = container.child(panel_container);
+            // Position the panel below the button
+            let positioned_panel = div()
+                .absolute()
+                .top_full()
+                .left(px(0.0))
+                .mt(px(4.0))
+                .child(panel)
+                .id("menu-panel")
+                .on_mouse_down(MouseButton::Left, |_event, _window, cx| {
+                    // Stop propagation so clicks inside the menu don't hit the backdrop
+                    cx.stop_propagation();
+                });
+
+            // Use deferred drawing with high priority to ensure menu appears above all other content
+            container = container
+                .child(deferred(backdrop).with_priority(999))
+                .child(deferred(positioned_panel).with_priority(1000));
         }
 
         container
