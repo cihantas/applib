@@ -1,73 +1,84 @@
 //! Context menu component for GPUI.
 //!
 //! A right-click context menu that appears at the cursor location.
-//! Follows SwiftUI's declarative pattern - no external state management needed.
+//! Uses a controlled component pattern - the caller manages open state.
 //!
 //! # Usage
 //!
-//! Simply wrap any element with `ContextMenu` and add menu items:
+//! The caller manages the context menu state through `Option<Point<Pixels>>`:
 //!
 //! ```ignore
+//! // In your view state:
+//! struct MyView {
+//!     context_menu_state: Option<Point<Pixels>>,  // None = closed, Some(pos) = open at pos
+//! }
+//!
+//! // In render:
 //! ContextMenu::new("my-context-menu", div().child("Right-click me"))
+//!     .state(self.context_menu_state)  // Pass the current state
+//!     .on_toggle(cx.listener(|this, pos, _window, cx| {
+//!         this.context_menu_state = pos;  // pos is Some(Point) to open, None to close
+//!         cx.notify();
+//!     }))
 //!     .item(MenuItem::new("copy", "Copy").on_select(|| handle_copy()))
 //!     .item(MenuItem::new("delete", "Delete").on_select(|| handle_delete()))
 //! ```
 //!
-//! The menu automatically:
-//! - Opens on right-click at the cursor position
-//! - Closes when clicking outside or selecting an item
+//! The menu:
+//! - Opens on right-click at the cursor position (calls on_toggle with Some(position))
+//! - Closes when clicking outside or selecting an item (calls on_toggle with None)
 //! - Handles keyboard navigation (planned)
 
 use gpui::prelude::*;
 use gpui::*;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::label::Icon;
 use super::menu::{Menu, MenuContent, MenuItem, SubMenuBuilder};
 
-/// Internal state for tracking context menu visibility.
-#[derive(Debug, Clone)]
-struct InternalState {
-    is_open: bool,
-    position: Point<Pixels>,
-}
-
-impl Default for InternalState {
-    fn default() -> Self {
-        Self {
-            is_open: false,
-            position: Point::default(),
-        }
-    }
-}
-
 /// A context menu that appears on right-click.
 ///
-/// Unlike traditional UI frameworks that require manual state management,
-/// `ContextMenu` manages its own visibility state internally, similar to SwiftUI.
+/// This is a controlled component - the caller manages the open/close state.
 ///
 /// # Example
 ///
 /// ```ignore
-/// // Simple usage - no state management needed
+/// // View state stores context menu position (None = closed)
+/// struct MyView {
+///     menu_position: Option<Point<Pixels>>,
+/// }
+///
+/// // In render:
 /// ContextMenu::new("file-menu", file_item)
+///     .state(self.menu_position)
+///     .on_toggle(cx.listener(|this, pos, _window, cx| {
+///         this.menu_position = pos;
+///         cx.notify();
+///     }))
 ///     .item(MenuItem::new("open", "Open"))
 ///     .item(MenuItem::new("delete", "Delete").on_select(|| delete_file()))
 ///
 /// // With submenu
 /// ContextMenu::new("edit-menu", text_field)
+///     .state(self.menu_position)
+///     .on_toggle(cx.listener(|this, pos, _window, cx| {
+///         this.menu_position = pos;
+///         cx.notify();
+///     }))
 ///     .item(MenuItem::new("cut", "Cut").shortcut("⌘X"))
 ///     .item(MenuItem::new("copy", "Copy").shortcut("⌘C"))
 ///     .item(MenuItem::new("paste", "Paste").shortcut("⌘V"))
 ///     .divider()
-///     .item(MenuItem::new("delete", "Delete").on_select(|| delete_file()))
+///     .item(MenuItem::new("delete", "Delete"))
 /// ```
 pub struct ContextMenu {
     id: ElementId,
     content: AnyElement,
     items: Vec<MenuContent>,
-    state: Rc<RefCell<InternalState>>,
+    /// Current menu state: None = closed, Some(position) = open at position
+    state: Option<Point<Pixels>>,
+    /// Callback when menu should open or close
+    on_toggle: Option<Rc<dyn Fn(Option<Point<Pixels>>, &mut Window, &mut App) + 'static>>,
 }
 
 impl ContextMenu {
@@ -83,8 +94,28 @@ impl ContextMenu {
             id: id.into(),
             content: content.into_any_element(),
             items: Vec::new(),
-            state: Rc::new(RefCell::new(InternalState::default())),
+            state: None,
+            on_toggle: None,
         }
+    }
+
+    /// Sets the menu state: None = closed, Some(position) = open at position.
+    pub fn state(mut self, state: Option<Point<Pixels>>) -> Self {
+        self.state = state;
+        self
+    }
+
+    /// Sets the toggle handler called when the menu should open or close.
+    ///
+    /// The handler receives:
+    /// - `Some(position)` when the menu should open at the given cursor position
+    /// - `None` when the menu should close
+    pub fn on_toggle(
+        mut self,
+        handler: impl Fn(Option<Point<Pixels>>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_toggle = Some(Rc::new(handler));
+        self
     }
 
     /// Adds a menu item to the context menu.
@@ -148,7 +179,7 @@ impl ContextMenu {
     /// Builds the menu panel element at the given position.
     fn build_menu_panel(
         items: Vec<MenuContent>,
-        state: Rc<RefCell<InternalState>>,
+        on_close: Rc<dyn Fn(&mut Window, &mut App) + 'static>,
     ) -> Div {
         let panel_bg = hsla(0.0, 0.0, 1.0, 1.0);
         let border_color = hsla(0.0, 0.0, 0.78, 1.0);
@@ -168,25 +199,22 @@ impl ContextMenu {
                 spread_radius: px(0.0),
             }]);
 
-        // Dismiss handler that closes the menu
-        let on_dismiss = {
-            let state = state.clone();
-            move |_window: &mut Window, _cx: &mut App| {
-                state.borrow_mut().is_open = false;
-            }
-        };
-
         // Add items to panel
         for content in items {
             match content {
                 MenuContent::Item(item) => {
-                    panel = panel.child(Self::build_menu_item(item, state.clone()));
+                    let on_close_clone = on_close.clone();
+                    panel = panel.child(Self::build_menu_item(item, on_close_clone));
                 }
                 MenuContent::Divider => {
                     panel = panel.child(Menu::build_divider());
                 }
                 MenuContent::Submenu { id, label, icon, items } => {
-                    let submenu_panel = Menu::build_submenu_panel(&items, on_dismiss.clone());
+                    let on_close_clone = on_close.clone();
+                    let on_dismiss = move |window: &mut Window, cx: &mut App| {
+                        on_close_clone(window, cx);
+                    };
+                    let submenu_panel = Menu::build_submenu_panel(&items, on_dismiss);
                     panel = panel.child(
                         div()
                             .relative()
@@ -207,7 +235,10 @@ impl ContextMenu {
     }
 
     /// Builds a single menu item element that closes menu on click.
-    fn build_menu_item(item: MenuItem, state: Rc<RefCell<InternalState>>) -> Stateful<Div> {
+    fn build_menu_item(
+        item: MenuItem,
+        on_close: Rc<dyn Fn(&mut Window, &mut App) + 'static>,
+    ) -> Stateful<Div> {
         let hover_bg = hsla(211.0 / 360.0, 0.95, 0.53, 1.0);
         let text_color = hsla(0.0, 0.0, 0.15, 1.0);
         let hover_text_color = hsla(0.0, 0.0, 1.0, 1.0);
@@ -254,18 +285,18 @@ impl ContextMenu {
 
             // Add click handler
             if let Some(handler) = on_select {
-                let state_for_click = state.clone();
+                let on_close_for_click = on_close.clone();
                 row = row.on_click(move |_event, window, cx| {
-                    // Close the menu
-                    state_for_click.borrow_mut().is_open = false;
+                    // Close the menu first
+                    on_close_for_click(window, cx);
                     // Call the handler
                     handler(window, cx);
                 });
             } else {
                 // Still close on click even without handler
-                let state_for_click = state.clone();
-                row = row.on_click(move |_event, _window, _cx| {
-                    state_for_click.borrow_mut().is_open = false;
+                let on_close_for_click = on_close.clone();
+                row = row.on_click(move |_event, window, cx| {
+                    on_close_for_click(window, cx);
                 });
             }
         }
@@ -297,48 +328,65 @@ impl IntoElement for ContextMenu {
         let id = self.id;
         let items = self.items;
         let state = self.state;
-
-        // Read current state
-        let is_open = state.borrow().is_open;
-        let position = state.borrow().position;
+        let on_toggle = self.on_toggle;
 
         // Container wraps the content and positions the menu
-        let state_for_click = state.clone();
         let mut container = div()
             .id(id)
             .relative()
-            .child(self.content)
-            // Right-click opens the menu
-            .on_mouse_down(MouseButton::Right, move |event, _window, _cx| {
-                let mut s = state_for_click.borrow_mut();
-                s.is_open = true;
-                s.position = event.position;
+            .child(self.content);
+
+        // Add right-click handler if we have a toggle callback
+        if let Some(ref toggle) = on_toggle {
+            let toggle_for_open = toggle.clone();
+            container = container.on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                toggle_for_open(Some(event.position), window, cx);
             });
+        }
 
         // Add menu panel if open
-        if is_open {
-            let panel = Self::build_menu_panel(items, state.clone());
+        if let Some(_position) = state {
+            // Create close handler
+            let on_close: Rc<dyn Fn(&mut Window, &mut App) + 'static> = if let Some(ref toggle) = on_toggle {
+                let toggle_for_close = toggle.clone();
+                Rc::new(move |window, cx| {
+                    toggle_for_close(None, window, cx);
+                })
+            } else {
+                Rc::new(|_window, _cx| {})
+            };
+
+            let on_close_for_backdrop = on_close.clone();
+            let panel = Self::build_menu_panel(items, on_close);
 
             // Backdrop to catch clicks outside the menu
-            let state_for_backdrop = state.clone();
             let backdrop = div()
                 .absolute()
                 .top(px(0.0))
                 .left(px(0.0))
                 .w(px(10000.0))  // Large enough to cover the screen
                 .h(px(10000.0))
-                .on_mouse_down(MouseButton::Left, move |_event, _window, _cx| {
-                    state_for_backdrop.borrow_mut().is_open = false;
+                .on_mouse_down(MouseButton::Left, move |_event, window, cx| {
+                    on_close_for_backdrop(window, cx);
                 })
-                .on_mouse_down(MouseButton::Right, move |_event, _window, _cx| {
-                    // Also close on right-click outside
+                .on_mouse_down(MouseButton::Right, {
+                    let toggle = on_toggle.clone();
+                    move |event, window, cx| {
+                        // Close current menu, open at new position
+                        if let Some(ref toggle) = toggle {
+                            toggle(Some(event.position), window, cx);
+                        }
+                    }
                 });
 
-            // Position the panel at the cursor position
+            // Position the panel just below and to the right of the element
+            // Note: We can't use the stored position directly as it's in window coordinates
+            // and we're positioning relative to the container. Instead, we position at the
+            // bottom-left of the triggering element.
             let positioned_panel = div()
                 .absolute()
-                .left(position.x)
-                .top(position.y)
+                .left(px(0.0))
+                .top_full()  // Position at 100% of parent height (just below the element)
                 .child(panel)
                 .id("context-menu-panel")
                 .on_mouse_down(MouseButton::Left, |_event, _window, cx| {
@@ -349,7 +397,10 @@ impl IntoElement for ContextMenu {
                     cx.stop_propagation();
                 });
 
-            container = container.child(backdrop).child(positioned_panel);
+            // Use deferred drawing with high priority to ensure menu appears above all other content
+            container = container
+                .child(deferred(backdrop).with_priority(999))
+                .child(deferred(positioned_panel).with_priority(1000));
         }
 
         container
@@ -362,7 +413,7 @@ mod tests {
 
     #[test]
     fn test_context_menu_creation() {
-        // Just verify it compiles - no state management needed
+        // Just verify it compiles
         let _menu = ContextMenu::new("test", div())
             .item(MenuItem::new("item1", "Item 1"))
             .divider()
