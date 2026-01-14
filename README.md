@@ -10,6 +10,8 @@ A native application framework for building Linux desktop applications.
 
 AppLib provides the foundation for creating polished, high-performance desktop apps with a complete set of UI components, window management, and system integration.
 
+![AppLib Showcase](docs/assets/showcase.gif)
+
 ## Features
 
 - **60+ Components** - Buttons, lists, tables, forms, navigation, and more
